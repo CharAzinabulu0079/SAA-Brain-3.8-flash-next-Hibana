@@ -1,0 +1,7 @@
+SAA-Brain-3.8-flash-next-Hibana
+Copyright 2026 Contributors
+
+This repository contains serving recipes, patches, and distillation scripts built with gratitude for:
+- Hibana (https://github.com/sharar-project/hibana) by Yahya Emara / sharar-project, licensed under the Apache License, Version 2.0.
+- Qwen3.8-Flash-Next-NVFP4 (https://huggingface.co/RadixArk/Qwen3.8-Flash-Next-NVFP4) by RadixArk.
+- Qwen3.8-Flash-Next-NVFP4-sharar-w3-qad (https://huggingface.co/yemara/Qwen3.8-Flash-Next-NVFP4-sharar-w3-qad) by yemara.

@@ -1,0 +1,34 @@
+[Unit]
+Description=Hibana FlashNext Production Brain (16-way batch, NVFP4 KV, SSD tier, distilled MTP)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hibana
+Environment=HF_HOME=/opt/hibana/hf
+Environment=HIBANA_FLASHNEXT_CACHE=/opt/hibana/hf
+Environment=HIBANA_RESULTS=/opt/hibana/results
+Environment=HIBANA_HOST=127.0.0.1
+Environment=HIBANA_PORT=30004
+Environment=HIBANA_MAX_CONTEXT=262144
+Environment=HIBANA_MAX_BATCH=16
+Environment=HIBANA_KV_POOL_TOKENS=524288
+Environment=HIBANA_STATE_SLOTS=36
+Environment=HIBANA_HOST_FLOOR_GIB=4
+Environment=HIBANA_VISION=1
+Environment=HIBANA_SPEC=8
+Environment=HIBANA_SPEC_STEP_COST=0.10
+Environment=HIBANA_SPEC_DEPTHS=2:7,4:6,8:3,16:3
+Environment=HIBANA_DRAFT_VOCAB=0
+Environment=HIBANA_SSD=1
+Environment=HIBANA_SSD_GIB=200
+Environment=HIBANA_MTP_WEIGHTS=/opt/hibana/mtp/mtp_weights.safetensors
+ExecStartPre=-/usr/bin/python3 /opt/hibana/scripts/drop_weight_cache.py
+ExecStart=/opt/hibana/.venv/bin/hibana serve flashnext --throughput
+Restart=always
+RestartSec=10
+TimeoutStartSec=900
+TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target

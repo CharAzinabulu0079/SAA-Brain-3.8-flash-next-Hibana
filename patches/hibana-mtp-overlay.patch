@@ -1,0 +1,62 @@
+diff --git a/hibana/engine/config.py b/hibana/engine/config.py
+index ba71e80..d0f7177 100644
+--- a/hibana/engine/config.py
++++ b/hibana/engine/config.py
+@@ -111,6 +111,7 @@ class EngineConfig:
+     spec_step_cost: float = 0.0               # HIBANA_SPEC_STEP_COST: a drafted token's cost against a depth-1 round, for adaptive depth (engine/depth.py; 0: fixed)
+     spec_policy: str = "fixed"                # HIBANA_SPEC_POLICY: fixed | budget (engine/depth.RowBudget: verified drafts from scores and measured costs)
+     draft_dir: str | None = None              # HIBANA_DRAFT
++    mtp_weights: str | None = None            # HIBANA_MTP_WEIGHTS: optional safetensors overlay for FlashNext MTP weights
+     host_floor_gib: float = HOST_FLOOR_KIB / 2**20  # HIBANA_HOST_FLOOR_GIB: MemAvailable the pools leave for the OS and other programs; admission holds and the guard acts under half of it
+     draft_vocab: int = 0                      # HIBANA_DRAFT_VOCAB: reduced MTP draft vocabulary rows (0: full)
+     draft_head: str = "fp8"                   # HIBANA_DRAFT_HEAD: fp8 (the target's head), w3 or w2
+@@ -194,6 +195,7 @@ class EngineConfig:
+             spec_step_cost=float(_str(e, "HIBANA_SPEC_STEP_COST") or 0.0),
+             spec_policy=_str(e, "HIBANA_SPEC_POLICY", "fixed"),
+             draft_dir=_str(e, "HIBANA_DRAFT"),
++            mtp_weights=_str(e, "HIBANA_MTP_WEIGHTS"),
+             host_floor_gib=floor_kib(e) / 2**20,
+             draft_vocab=_int(e, "HIBANA_DRAFT_VOCAB", 0),
+             draft_head=_str(e, "HIBANA_DRAFT_HEAD", "fp8"),
+diff --git a/hibana/model/flashnext/mtp.py b/hibana/model/flashnext/mtp.py
+index 82bd56d..32ecc29 100644
+--- a/hibana/model/flashnext/mtp.py
++++ b/hibana/model/flashnext/mtp.py
+@@ -24,6 +24,27 @@ from hibana.model.norm import GemmaRMSNorm
+ PREFIX = "mtp"
+ 
+ 
++class _MtpWeightOverlay:
++    """Read mtp.* tensors from a standalone safetensors file while delegating other keys."""
++
++    def __init__(self, base, path: str):
++        from pathlib import Path
++        from safetensors import safe_open
++        p = Path(path)
++        self.snap = p.parent
++        self._base = base
++        self._handle = safe_open(str(p), framework="pt", device="cpu")
++        self._local = set(self._handle.keys())
++        self._map = dict(getattr(base, "_map", {}))
++        for k in self._local:
++            self._map[k] = p.name
++
++    def get(self, name: str) -> torch.Tensor:
++        if name in self._local:
++            return self._handle.get_tensor(name).clone()
++        return self._base.get(name)
++
++
+ class FlashNextMtpHead(MtpLayer):
+     DRAFT_HEADS = True  # set_draft_head: reduced vocabulary and/or 3-bit shortlist
+ 
+@@ -40,6 +61,9 @@ class FlashNextMtpHead(MtpLayer):
+         self.hidden_width = self.hc * self.hidden_size  # the "hidden" the proposer carries per row
+         precision = precision or model.precision  # the draft head's projections: the trunk's precision
+         eps = t.rms_norm_eps
++        from hibana.engine.config import current as engine_cfg
++        if engine_cfg().mtp_weights:
++            w = _MtpWeightOverlay(w, engine_cfg().mtp_weights)
+         g = lambda name: w.get(f"{PREFIX}.{name}").to(device)  # noqa: E731
+         self.fc_e = TrunkLinear.from_bf16(g("fc_embedding.weight"), precision)
+         self.fc_h = TrunkLinear.from_bf16(g("fc_hidden.weight"), precision)

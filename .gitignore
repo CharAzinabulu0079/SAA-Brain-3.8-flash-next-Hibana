@@ -1,0 +1,27 @@
+# Secrets, credentials, and environment files
+.env
+*.env
+*.key
+*.pem
+*keys*.json
+*secret*
+
+# Weights, checkpoints, and large binary artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+*.onnx
+hf/
+modelcache/
+results/
+
+# Logs, datasets, and temporary outputs
+*.jsonl
+*.log
+*.bak*
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
